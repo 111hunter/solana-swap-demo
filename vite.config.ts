@@ -6,13 +6,12 @@ export default defineConfig({
   plugins: [react()],
   define: {
     global: 'globalThis',
-    // Make Buffer available globally for production builds
-    'global.Buffer': 'Buffer',
   },
   resolve: {
     alias: {
       buffer: 'buffer',
       process: 'process',
+      stream: 'stream-browserify',
       util: 'util',
     },
   },
@@ -21,11 +20,15 @@ export default defineConfig({
       'buffer', 
       'process',
       'util',
+      'stream-browserify',
     ],
   },
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      external: [],
     },
   },
 })

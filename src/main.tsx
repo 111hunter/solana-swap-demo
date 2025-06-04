@@ -27,7 +27,7 @@ import '@solana/wallet-adapter-react-ui/styles.css'
 // Better RPC endpoints configuration
 const RPC_ENDPOINTS = {
   [WalletAdapterNetwork.Mainnet]: [
-    'https://api.mainnet-beta.solana.com',
+    'https://noelyn-i2mq2o-fast-mainnet.helius-rpc.com',
     'https://solana-api.projectserum.com',
     'https://rpc.helius.xyz/?api-key=demo', // Free tier with better limits
     'https://mainnet.helius-rpc.com/?api-key=demo',
