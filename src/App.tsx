@@ -1,5 +1,6 @@
 import type { QuoteResponse } from '@jup-ag/api'
 import { createJupiterApiClient } from '@jup-ag/api'
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import {
@@ -7,34 +8,13 @@ import {
   LAMPORTS_PER_SOL,
   VersionedTransaction
 } from '@solana/web3.js'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
-
-// Fixed token list for simplicity
-const TOKENS = {
-  SOL: {
-    symbol: 'SOL',
-    mint: 'So11111111111111111111111111111111111111112',
-    decimals: 9,
-    name: 'Solana'
-  },
-  USDC: {
-    symbol: 'USDC',
-    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-    decimals: 6,
-    name: 'USD Coin'
-  },
-  BONK: {
-    symbol: 'BONK',
-    mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-    decimals: 5,
-    name: 'Bonk'
-  }
-}
+import { getNetworkDisplayName, getTokensForNetwork, getTokenSymbols, type TokenSymbol } from './tokens'
 
 interface SwapState {
-  inputToken: keyof typeof TOKENS
-  outputToken: keyof typeof TOKENS
+  inputToken: TokenSymbol
+  outputToken: TokenSymbol
   inputAmount: string
   quote: QuoteResponse | null
   isLoading: boolean
@@ -45,10 +25,19 @@ interface SwapState {
   lastQuoteTime: number
 }
 
-function App() {
+interface AppProps {
+  network: WalletAdapterNetwork
+}
+
+function App({ network }: AppProps) {
   const { connection } = useConnection()
   const wallet = useWallet()
   const [localWallet, setLocalWallet] = useState<Keypair | null>(null)
+
+  // Get tokens for current network
+  const TOKENS = useMemo(() => getTokensForNetwork(network), [network])
+  const TOKEN_SYMBOLS = useMemo(() => getTokenSymbols(network), [network])
+
   const [swapState, setSwapState] = useState<SwapState>({
     inputToken: 'SOL',
     outputToken: 'USDC',
@@ -63,6 +52,18 @@ function App() {
   })
 
   const jupiterApi = createJupiterApiClient()
+
+  // Reset to available tokens when network changes
+  useEffect(() => {
+    const availableSymbols = TOKEN_SYMBOLS
+    setSwapState(prev => ({
+      ...prev,
+      inputToken: availableSymbols.includes(prev.inputToken) ? prev.inputToken : 'SOL',
+      outputToken: availableSymbols.includes(prev.outputToken) ? prev.outputToken : 'USDC',
+      quote: null,
+      error: null
+    }))
+  }, [TOKEN_SYMBOLS])
 
   // Create local wallet
   const createLocalWallet = useCallback(() => {
@@ -324,22 +325,22 @@ function App() {
   }, [])
 
   // Handle token change to prevent same input/output
-  const handleInputTokenChange = (newToken: keyof typeof TOKENS) => {
+  const handleInputTokenChange = (newToken: TokenSymbol) => {
     setSwapState(prev => ({ 
       ...prev, 
       inputToken: newToken,
       outputToken: newToken === prev.outputToken ? 
-        (Object.keys(TOKENS).find(key => key !== newToken) as keyof typeof TOKENS) || 'USDC' : 
+        (TOKEN_SYMBOLS.find(symbol => symbol !== newToken) || 'USDC') : 
         prev.outputToken
     }))
   }
 
-  const handleOutputTokenChange = (newToken: keyof typeof TOKENS) => {
+  const handleOutputTokenChange = (newToken: TokenSymbol) => {
     setSwapState(prev => ({ 
       ...prev, 
       outputToken: newToken,
       inputToken: newToken === prev.inputToken ? 
-        (Object.keys(TOKENS).find(key => key !== newToken) as keyof typeof TOKENS) || 'SOL' : 
+        (TOKEN_SYMBOLS.find(symbol => symbol !== newToken) || 'SOL') : 
         prev.inputToken
     }))
   }
@@ -395,6 +396,31 @@ function App() {
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
       <h1>Solana Swap Prototype</h1>
+      
+      {/* Network Info */}
+      <div style={{ 
+        marginBottom: '20px', 
+        padding: '15px', 
+        backgroundColor: network === WalletAdapterNetwork.Mainnet ? '#d4edda' : '#fff3cd',
+        border: `1px solid ${network === WalletAdapterNetwork.Mainnet ? '#c3e6cb' : '#ffeaa7'}`,
+        borderRadius: '8px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <strong>Current Network:</strong> {getNetworkDisplayName(network)}
+            <br />
+            <span style={{ fontSize: '14px', color: '#666' }}>
+              Available tokens: {TOKEN_SYMBOLS.length} ({TOKEN_SYMBOLS.join(', ')})
+            </span>
+          </div>
+          <span style={{ 
+            fontSize: '20px',
+            color: network === WalletAdapterNetwork.Mainnet ? '#155724' : '#856404'
+          }}>
+            {network === WalletAdapterNetwork.Mainnet ? '🟢' : '🟡'}
+          </span>
+        </div>
+      </div>
       
       {/* Wallet Section */}
       <div style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
@@ -483,8 +509,7 @@ function App() {
               <strong>Address:</strong> {currentWallet.toString().slice(0, 8)}...{currentWallet.toString().slice(-8)}
             </p>
             <p style={{ margin: '0 0 5px 0' }}>
-              <strong>Network:</strong> {connection.rpcEndpoint.includes('mainnet') ? 'Mainnet' : 
-                                       connection.rpcEndpoint.includes('testnet') ? 'Testnet' : 'Devnet'}
+              <strong>Network:</strong> {getNetworkDisplayName(network)}
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 5px 0' }}>
               <span>
@@ -536,10 +561,10 @@ function App() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <select 
               value={swapState.inputToken} 
-              onChange={(e) => handleInputTokenChange(e.target.value as keyof typeof TOKENS)}
+              onChange={(e) => handleInputTokenChange(e.target.value as TokenSymbol)}
             >
-              {Object.entries(TOKENS).map(([key, token]) => (
-                <option key={key} value={key}>{token.symbol} - {token.name}</option>
+              {TOKEN_SYMBOLS.map((symbol) => (
+                <option key={symbol} value={symbol}>{symbol} - {TOKENS[symbol].name}</option>
               ))}
             </select>
             <input
@@ -560,10 +585,10 @@ function App() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <select 
               value={swapState.outputToken} 
-              onChange={(e) => handleOutputTokenChange(e.target.value as keyof typeof TOKENS)}
+              onChange={(e) => handleOutputTokenChange(e.target.value as TokenSymbol)}
             >
-              {Object.entries(TOKENS).map(([key, token]) => (
-                <option key={key} value={key}>{token.symbol} - {token.name}</option>
+              {TOKEN_SYMBOLS.map((symbol) => (
+                <option key={symbol} value={symbol}>{symbol} - {TOKENS[symbol].name}</option>
               ))}
             </select>
             <input
@@ -671,7 +696,7 @@ function App() {
               <p><strong>Status:</strong> {swapState.txStatus}</p>
               <p><strong>Signature:</strong> 
                 <a 
-                  href={`https://explorer.solana.com/tx/${swapState.txSignature}?cluster=devnet`}
+                  href={`https://explorer.solana.com/tx/${swapState.txSignature}${network === WalletAdapterNetwork.Mainnet ? '' : `?cluster=${network}`}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ marginLeft: '10px', color: '#007bff' }}

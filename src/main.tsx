@@ -145,7 +145,7 @@ function Root() {
       <ConnectionProvider endpoint={endpoint}>
         <WalletProvider wallets={wallets} autoConnect={false}>
           <WalletModalProvider>
-            <App />
+            <App network={network} />
           </WalletModalProvider>
         </WalletProvider>
       </ConnectionProvider>
