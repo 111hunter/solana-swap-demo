@@ -206,6 +206,13 @@ function App() {
           quoteResponse: swapState.quote,
           userPublicKey: userPublicKey.toString(),
           wrapAndUnwrapSol: true,
+          useSharedAccounts: true,
+          feeAccount: undefined,
+          trackingAccount: undefined,
+          computeUnitPriceMicroLamports: undefined,
+          prioritizationFeeLamports: undefined,
+          asLegacyTransaction: false,
+          destinationTokenAccount: undefined,
         },
       })
 
@@ -664,10 +671,7 @@ function App() {
               <p><strong>Status:</strong> {swapState.txStatus}</p>
               <p><strong>Signature:</strong> 
                 <a 
-                  href={`https://explorer.solana.com/tx/${swapState.txSignature}${
-                    connection.rpcEndpoint.includes('mainnet') ? '' : 
-                    connection.rpcEndpoint.includes('testnet') ? '?cluster=testnet' : '?cluster=devnet'
-                  }`}
+                  href={`https://explorer.solana.com/tx/${swapState.txSignature}?cluster=devnet`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ marginLeft: '10px', color: '#007bff' }}

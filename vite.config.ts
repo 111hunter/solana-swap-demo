@@ -1,21 +1,31 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   define: {
     global: 'globalThis',
-    'process.env': {},
+    // Make Buffer available globally for production builds
+    'global.Buffer': 'Buffer',
   },
   resolve: {
     alias: {
       buffer: 'buffer',
-      stream: 'stream-browserify',
-      crypto: 'crypto-browserify',
+      process: 'process',
+      util: 'util',
     },
   },
   optimizeDeps: {
-    include: ['buffer', 'stream-browserify', 'crypto-browserify'],
+    include: [
+      'buffer', 
+      'process',
+      'util',
+    ],
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
   },
 })

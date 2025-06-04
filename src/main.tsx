@@ -1,3 +1,11 @@
+// Polyfills for Node.js globals in browser environment
+import { Buffer } from 'buffer'
+import process from 'process'
+
+// Make Buffer and process globally available
+globalThis.Buffer = Buffer
+globalThis.process = process
+
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
